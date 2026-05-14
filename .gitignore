@@ -4,3 +4,4 @@ y_train_master.npy
 __pycache__/ 
 X_train_master.npy 
 y_train_master.npy 
+results/*.npy 
