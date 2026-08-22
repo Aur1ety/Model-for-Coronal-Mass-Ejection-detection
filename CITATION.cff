@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it."
+type: software
+title: "Aditya-L1 ASPEX-SWIS CME Detection Pipeline"
+authors:
+  - name: "Arinjay"
+license: MIT
+repository-code: "https://github.com/Aur1ety/Model-for-Coronal-Mass-Ejection-detection"
+abstract: >-
+  Autonomous Coronal Mass Ejection detection from real-time in-situ solar-wind
+  plasma measurements (ISRO Aditya-L1 ASPEX-SWIS) using a TCN+TCAN ensemble,
+  evaluated on a held-out blind test. Companion to Magnuson (MAG magnetometer)
+  and Roentgen (SoLEXS/HEL1OS X-ray) — three instruments, one mission.
+keywords:
+  - coronal mass ejection
+  - solar wind
+  - Aditya-L1
+  - machine learning
