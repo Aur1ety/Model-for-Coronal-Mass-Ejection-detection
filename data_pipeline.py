@@ -61,7 +61,7 @@ logger = logging.getLogger("data_pipeline")
 SENTINEL_VALUE = -1e31          # ISRO fill / missing-data sentinel
 SENTINEL_THRESHOLD = -9e30      # any value < this is treated as NaN
 
-# UPDATED: Path matches your current Colab session folder
+# Default data folder in a Colab session
 DEFAULT_COLAB_DATA_DIR = "/content/data_2024"
 
 # ASPEX-SWIS L2_BLK variable names (Updated for V03 calibration)
@@ -671,7 +671,7 @@ if __name__ == "__main__":
     else:
         logger.info("=== Starting V2.0 Pipeline for Aditya-L1 Data ===")
         
-        # 2. Run the actual pipeline, pointing directly to your downloaded V03 files
+        # 2. Run the pipeline on the downloaded V03 files
         results = run_pipeline(
             cdf_directory=DEFAULT_COLAB_DATA_DIR,
             synthetic_labels=True, # We will swap this for real labels later

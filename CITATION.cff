@@ -8,8 +8,9 @@ license: MIT
 repository-code: "https://github.com/Aur1ety/Model-for-Coronal-Mass-Ejection-detection"
 abstract: >-
   Autonomous Coronal Mass Ejection detection from real-time in-situ solar-wind
-  plasma measurements (ISRO Aditya-L1 ASPEX-SWIS) using a TCN+TCAN ensemble,
-  evaluated on a held-out blind test. Companion to Magnuson (MAG magnetometer)
+  plasma measurements (ISRO Aditya-L1 ASPEX-SWIS) using a TCN+TCAN ensemble.
+  Only the TCN validation F1 (0.3101) has been independently reproduced; the
+  May 2026 blind-test results are logged, not reproduced. Companion to Magnuson (MAG magnetometer)
   and Roentgen (SoLEXS/HEL1OS X-ray) — three instruments, one mission.
 keywords:
   - coronal mass ejection

@@ -21,29 +21,34 @@ solar wind sensor data from India's first solar observatory —
 **Aditya-L1** — and outputs a real-time probability that a CME is 
 currently passing through the sensor.
 
-The system was trained on data from Solar Maximum (2024–2026), the 
-most active period of the current solar cycle, and validated on a 
-completely unseen real event: the May 2026 solar eruption.
+The system was trained on data from Solar Maximum (2024–2026), the
+most active period of the current solar cycle, and then run on a window
+it never saw in training, the May 2026 solar eruption, as a blind test.
+See Key Results for which numbers have been independently reproduced.
 
 ---
 
 ## Key Results
 
-| Metric | Value |
-|--------|-------|
-| Validation F1 score | 0.3101 (TCN) / 0.3182 (ensemble) |
-| Blind test peak P(CME) | **0.8707** |
-| Alert threshold crossed | Yes — 23 windows above 0.82 |
-| Peak detection time | May 9, 2026 at 03:10 UTC |
-| Physics corroboration | He/H = 0.2965 (CME ejecta), Vsw = 598 km/s |
-| Blind test verdict | **CME DETECTED** |
+| Metric | Value | Status |
+|--------|-------|--------|
+| Validation F1 score (TCN) | **0.3101** | reproduced |
+| Validation F1 score (ensemble) | 0.3182 | logged, not reproduced |
+| Blind test peak P(CME) | 0.8707 | logged, not reproduced |
+| Alert threshold crossed | 23 windows above 0.82 | logged, not reproduced |
+| Peak detection time | May 9, 2026 at 03:10 UTC | logged, not reproduced |
+| Physics check | He/H = 0.2965, Vsw = 598 km/s | logged, not reproduced |
 
-The F1 of ~0.32 on the validation set represents the near-theoretical 
-ceiling for **single-point plasma sensing** at L1. Approximately 30–50% 
-of CMEs are "stealth" events with no upstream plasma precursor — 
-physically capping recall regardless of model architecture. The blind 
-test result of P=0.8707 confirms the model correctly responds to 
-real CME plasma signatures when they are present in the data.
+An independent re-run from the files in this repository reproduced only
+the TCN's validation F1 of 0.3101. The other numbers come from training
+and test logs and could not be reproduced from the shipped files, so
+treat them as logged, not verified. The event labels also have no
+documented source yet.
+
+An F1 around 0.31 is low. Part of the reason is physical: a single-point
+plasma sensor at L1 only sees what reaches it, and some CMEs arrive with
+a weak or unclear plasma signature, which limits recall for any model
+that reads this data alone.
 
 ---
 
@@ -74,8 +79,8 @@ creating a high false-positive environment.
 The **He/H ratio** is the most physically meaningful CME indicator in 
 this feature set. Solar wind from CME ejecta contains proportionally 
 more helium than quiet wind — a signature of the CME's origin deep in 
-the solar corona. In the May 2026 blind test, He/H peaked at 0.2965, 
-nearly 7× the quiet-wind baseline.
+the solar corona. In the logged May 2026 blind-test run, He/H peaked at
+0.2965, nearly 7× the quiet-wind baseline (not reproduced).
 
 ---
 
@@ -184,9 +189,12 @@ training conditions:
 
 | Architecture | Val F1 | Notes |
 |-------------|--------|-------|
-| **TCN** | **0.2484 → 0.3101** | Winner. Long-range extraction, parallelisable |
+| **TCN** | **0.3101** | Winner. Long-range extraction, parallelisable |
 | XGBoost | 0.2100 | Lost temporal sequence during flattening |
 | BiLSTM | 0.1952 | Vanishing gradients over 128-step windows |
+
+Only the TCN's 0.3101 has been independently reproduced; the XGBoost and
+BiLSTM scores, and the TCN's earlier 0.2484 baseline, are from training logs.
 
 ---
 
@@ -195,7 +203,7 @@ training conditions:
 │                             # S-G filtering, sequence builder
 ├── model_factory.py          # TCN + TCAN architecture, training loop,
 │                             # weighted loss, checkpoint save/load
-├── predict_streamlit.py      # Inference engine + Streamlit dashboard
+├── predict_streamlit.py      # Inference engine + Streamlit demo UI (synthetic data)
 ├── requirements.txt          # Python dependencies
 ├── saved_models/
 │   ├── tcn_optimised_v2.pth  # Trained TCN weights (F1=0.3101)
@@ -243,11 +251,16 @@ print(f"Alert:  {result['alert_level']}")
 pred_df = engine.predict_timeseries(raw_df)
 ```
 
-### Launch the Streamlit dashboard
+### Launch the Streamlit demo
 
 ```bash
 streamlit run predict_streamlit.py
 ```
+
+This is a demo UI, not a live monitor. It starts in demo mode, which draws a
+hand-made probability curve over synthetic data. With demo mode off it runs
+the real model, but still on synthetic input, because no live ASPEX-SWIS
+feed is connected yet.
 
 ### Retrain from scratch
 
