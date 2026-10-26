@@ -7,7 +7,7 @@ Aditya-L1 ASPEX-SWIS Pipeline v2.0
 Architecture highlights:
   - Dilated causal convolutions for long-range temporal receptive field
   - Residual blocks with skip connections (no vanishing gradients)
-  - Weighted Binary Cross-Entropy loss (handles 95% quiet / 5% CME imbalance)
+  - Weighted Binary Cross-Entropy loss (handles about 97% quiet / 3% CME imbalance)
   - Full W&B experiment tracking with hyperparameter sweeps
   - Model serialisation to ONNX for cross-platform deployment
 
@@ -150,15 +150,16 @@ class CMEDetectorTCN(nn.Module):
 
     Dilation schedule
     -----------------
-    Block 0: dilation=1  → looks back  2 steps
-    Block 1: dilation=2  → looks back  4 steps
-    Block 2: dilation=4  → looks back  8 steps
+    Block 0: dilation=1  → each of its two convs looks back  2 steps
+    Block 1: dilation=2  → each of its two convs looks back  4 steps
+    Block 2: dilation=4  → each of its two convs looks back  8 steps
     Block k: dilation=2^k
 
-    With n_blocks=8 and kernel_size=3:
-    Total receptive field = Σ(k=0..7) 2×2^k × (kernel_size-1)
-                          = 2 × (2^8 - 1) × 2 = 1020 steps
-    At 5-min cadence → 1020 × 5 min ≈ 85 hours of context!
+    With n_blocks=6 (the default) and kernel_size=3:
+    Total receptive field = 1 + Σ(k=0..5) 2×2^k × (kernel_size-1)
+                          = 1 + 2 × (2^6 - 1) × 2 = 253 steps
+    That is more than the 128-step window. The pipeline does not resample,
+    so a step is one native sample (2.5 to 5 s in the files checked).
 
     Parameters
     ----------
@@ -180,10 +181,7 @@ class CMEDetectorTCN(nn.Module):
         super().__init__()
 
         self.receptive_field = self._calc_rf(kernel_size, n_blocks)
-        logger.info(
-            "TCN receptive field = %d time-steps ≈ %.1f hours (5-min cadence)",
-            self.receptive_field, self.receptive_field * 5 / 60,
-        )
+        logger.info("TCN receptive field = %d time-steps (native samples)", self.receptive_field)
 
         # Input projection
         self.input_proj = nn.Conv1d(n_features, n_filters, kernel_size=1)
@@ -213,8 +211,8 @@ class CMEDetectorTCN(nn.Module):
 
     @staticmethod
     def _calc_rf(kernel_size: int, n_blocks: int) -> int:
-        """Calculate the total temporal receptive field in time-steps."""
-        return sum((kernel_size - 1) * (2 ** i) for i in range(n_blocks)) + 1
+        """Calculate the total temporal receptive field in time-steps (two causal convs per block)."""
+        return 2 * sum((kernel_size - 1) * (2 ** i) for i in range(n_blocks)) + 1
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """

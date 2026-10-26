@@ -69,18 +69,18 @@ CDF_VARMAP = {
     "epoch":    "epoch_for_cdf_mod",
     "vsw":      "proton_bulk_speed",    # Solar wind speed [km/s]
     "np":       "proton_density",       # Proton number density [cm^-3]
-    "tp":       "proton_thermal",       # Proton temperature/thermal proxy
+    "tp":       "proton_thermal",       # Proton thermal SPEED [km/s], not a temperature (see README Known Issues)
     "he_flux":  "alpha_density",        # Mapped to Alpha density for He/H ratio
     "h_flux":   "proton_density",       # Mapped to Proton density for He/H ratio
     "vth":      "proton_thermal",       # Thermal speed [km/s]
 }
 
 # Savitzky-Golay parameters
-SAVGOL_WINDOW  = 11   # Must be odd; ~5-min cadence × 11 ≈ 55 min smoothing
+SAVGOL_WINDOW  = 11   # Must be odd; 11 native samples (about 30 to 55 s at 2.5 to 5 s cadence)
 SAVGOL_POLYORD = 3    # Polynomial order — cubic preserves edge sharpness
 
 # Sequence / window parameters
-SEQUENCE_LENGTH = 128   # time-steps fed into TCN (~10.6 h at 5-min cadence)
+SEQUENCE_LENGTH = 128   # native samples fed into TCN (about 5 to 11 min at 2.5 to 5 s cadence)
 STRIDE          = 16    # hop size between consecutive windows
 
 # ---------------------------------------------------------------------------
@@ -215,7 +215,7 @@ def load_cdf_directory(directory: str) -> pd.DataFrame:
 
 def compute_he_h_ratio(df: pd.DataFrame) -> pd.Series:
     """
-    Compute the Helium-to-Proton (He/H) flux ratio.
+    Compute the Helium-to-Proton (He/H) density ratio (alpha density / proton density).
 
     Physical significance:
       - Quiet solar wind:  He/H ≈ 0.02–0.05  (2–5 %)
@@ -242,9 +242,10 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     --------
     vsw         : Solar wind proton speed [km/s]
     np          : Proton number density [cm^-3]
-    tp          : Proton temperature [K]  → log10 transformed
-    he_h_ratio  : He/H flux ratio  (high-weight CME indicator)
-    beta_proxy  : Plasma beta proxy = np × Tp / Vsw²  (dimensionless relative)
+    tp          : proton_thermal (a thermal SPEED in km/s, not a temperature) → clipped at 1e3, log10;
+                  so this column is constant (see README Known Issues)
+    he_h_ratio  : He/H density ratio  (high-weight CME indicator)
+    beta_proxy  : Plasma beta proxy = np × v_th / Vsw²  (v_th = proton thermal speed; relative only)
     dvsw_dt     : First-order temporal gradient of Vsw (detects shock ramp)
     """
     feat = pd.DataFrame(index=df.index)
@@ -254,7 +255,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     feat["tp"]         = np.log10(df["tp"].clip(lower=1e3))  # log10 for scale
     feat["he_h_ratio"] = compute_he_h_ratio(df)
 
-    # Plasma beta proxy: higher during CME magnetic clouds
+    # Plasma beta proxy: high in the hot, dense sheath, low in the cold magnetic cloud
     feat["beta_proxy"] = (df["np"] * df["tp"]) / (df["vsw"] ** 2 + 1e-6)
 
     # Shock ramp detection: rapid speed jump is CME leading edge signature

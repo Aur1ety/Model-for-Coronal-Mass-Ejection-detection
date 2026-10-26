@@ -320,7 +320,7 @@ def run_dashboard() -> None:
         st.markdown("""
 - Architecture: TCN with dilated residual blocks
 - Input: Vsw, np, Tp, He/H ratio, β proxy, ΔVsw/Δt
-- Sequence length: 128 steps (~10.6 h)
+- Sequence length: 128 native samples (about 5 to 11 min)
 - Trained on: ASPEX-SWIS L2-BLK CDF
         """)
 
@@ -343,7 +343,7 @@ def run_dashboard() -> None:
     # ── Load data ─────────────────────────────────────────────────────────────
     if demo_mode:
         raw_df = generate_demo_data(n_hours=n_hours, inject_cme=inject_cme)
-        st.info("🔬 Running in synthetic demo mode. Toggle off in sidebar to use real data.")
+        st.info("🔬 Running in synthetic demo mode. Turning it off tries to load a trained model, which does not work with the shipped files yet (see README Known Issues).")
     else:
         st.warning("Live CDF ingestion: connect your ASPEX-SWIS data feed here.")
         raw_df = generate_demo_data(n_hours=n_hours, inject_cme=False)
@@ -501,16 +501,16 @@ def run_dashboard() -> None:
 |---------|-------------|---------------|
 | Vsw | Solar wind speed | +200–500 km/s jump at shock |
 | np | Proton density | 3–10× enhancement in sheath |
-| Tp | Proton temperature (log) | Enhancement at shock, depletion in cloud |
-| He/H ratio | Helium-to-proton flux ratio | 0.08–0.30 in CME ejecta (vs ~0.04 quiet) |
-| β proxy | np × Tp / Vsw² | High in cloud, low in sheath |
+| Tp | Proton temperature (log; constant in this pipeline, see README) | Enhancement at shock, depletion in cloud |
+| He/H ratio | Alpha-to-proton density ratio | 0.08 to 0.30 in CME ejecta (vs ~0.04 quiet) |
+| β proxy | np × v_th / Vsw² | High in sheath, low in magnetic cloud |
 | ΔVsw/Δt | Speed gradient | Sharp positive spike at leading edge |
 
 **Model**: TCN (Temporal Convolutional Network)
 - Dilated causal convolutions (no future leakage)
 - Residual blocks with skip connections
-- Effective receptive field: ~85 hours
-- Loss: Weighted BCE (pos_weight ≈ 19 for 5% CME rate)
+- Receptive field: 253 steps (covers the whole 128-step window)
+- Loss: Weighted BCE (pos_weight 30.5 for a 3.2% CME rate)
 
 **Signal Processing**: Savitzky-Golay filter (window=11, poly=3)  
 → Smooths sensor noise while **preserving shock transients**
